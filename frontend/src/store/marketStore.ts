@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
 interface MarketFilters {
-  market: 'all' | 'stocks' | 'crypto' | 'ngx';
-  timeframe: 'daily' | 'ytd';
+  market: 'all' | 'us' | 'crypto' | 'ngx';
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'ytd';
   country?: string;
   type: 'gainers' | 'losers';
   limit: number;
@@ -22,8 +22,8 @@ interface MarketStore {
 export const useMarketStore = create<MarketStore>((set) => ({
   filters: {
     market: 'all',
-    timeframe: 'daily',
-    type: 'gainers',
+    timeframe: 'daily' as const,
+    type: 'gainers' as const,
     limit: 20,
   },
   activeView: 'table',

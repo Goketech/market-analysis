@@ -73,7 +73,12 @@ export class AnalysisEngine {
       SimpleMASignal: false,
     };
     const macdValues = MACD.calculate(macdInput);
-    const macd = macdValues[macdValues.length - 1] || {
+    const lastMacd = macdValues[macdValues.length - 1];
+    const macd = lastMacd ? {
+      MACD: lastMacd.MACD || 0,
+      signal: lastMacd.signal || 0,
+      histogram: lastMacd.histogram || 0,
+    } : {
       MACD: 0,
       signal: 0,
       histogram: 0,
@@ -118,7 +123,7 @@ export class AnalysisEngine {
     }
   }
 
-  private async calculateSentiment(symbol: string): Promise<AnalysisReport['sentiment']> {
+  private async calculateSentiment(_symbol: string): Promise<AnalysisReport['sentiment']> {
     // Mock sentiment calculation
     // In production, integrate with NewsAPI, Twitter API, etc.
     const score = Math.random() * 100;

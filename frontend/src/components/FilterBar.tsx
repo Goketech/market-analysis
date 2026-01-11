@@ -1,5 +1,5 @@
 import { useMarketStore } from '../store/marketStore';
-import { TrendingUp, TrendingDown, BarChart3, Globe } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 
 export function FilterBar() {
   const { filters, setFilters, setActiveView } = useMarketStore();
@@ -43,7 +43,29 @@ export function FilterBar() {
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
             <option value="ytd">Year to Date</option>
+          </select>
+        </div>
+
+        {/* Country Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Country (Optional)
+          </label>
+          <select
+            value={filters.country || ''}
+            onChange={(e) =>
+              setFilters({ country: e.target.value || undefined })
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          >
+            <option value="">All Countries</option>
+            <option value="US">United States</option>
+            <option value="NG">Nigeria</option>
+            <option value="GB">United Kingdom</option>
+            <option value="CA">Canada</option>
           </select>
         </div>
 

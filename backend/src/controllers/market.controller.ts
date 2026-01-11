@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { MarketService } from '../services/market.service';
-import { AppError } from '../middleware/errorHandler';
 
 const marketService = new MarketService();
 
@@ -20,7 +19,7 @@ export const getTopPerformers = async (
 
     const filters = {
       market: market as string,
-      timeframe: timeframe as 'daily' | 'ytd',
+      timeframe: timeframe as 'daily' | 'weekly' | 'monthly' | 'ytd',
       country: country as string | undefined,
       limit: parseInt(limit as string, 10),
       type: type as 'gainers' | 'losers',

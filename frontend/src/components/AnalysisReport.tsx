@@ -1,6 +1,7 @@
 import { useAnalysisReport } from '../api/market.api';
 import { useMarketStore } from '../store/marketStore';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Download } from 'lucide-react';
+import { apiClient } from '../api/client';
 
 export function AnalysisReport() {
   const { selectedSymbol, filters, setActiveView, setSelectedSymbol } = useMarketStore();
@@ -87,12 +88,41 @@ export function AnalysisReport() {
               {report.market.toUpperCase()} • Last updated: {new Date(report.timestamp).toLocaleString()}
             </p>
           </div>
-          <div
-            className={`px-4 py-2 rounded-lg font-semibold ${getRecommendationColor(
-              recommendation.action
-            )}`}
-          >
-            {recommendation.action}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={async () => {
+                try {
+                  const response = await apiClient.get(
+                    `/api/v1/analysis/${report.symbol}/export/pdf`,
+                    {
+                      params: { market: filters.market },
+                      responseType: 'blob',
+                    }
+                  );
+                  const url = window.URL.createObjectURL(new Blob([response.data]));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `${report.symbol}_analysis_${Date.now()}.pdf`);
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                } catch (error) {
+                  console.error('Error exporting PDF:', error);
+                  alert('Failed to export PDF. Please try again.');
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-market-blue text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+            >
+              <Download size={16} />
+              Export PDF
+            </button>
+            <div
+              className={`px-4 py-2 rounded-lg font-semibold ${getRecommendationColor(
+                recommendation.action
+              )}`}
+            >
+              {recommendation.action}
+            </div>
           </div>
         </div>
       </div>

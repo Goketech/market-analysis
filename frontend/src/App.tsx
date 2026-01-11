@@ -3,9 +3,13 @@ import { FilterBar } from './components/FilterBar';
 import { MarketTable } from './components/MarketTable';
 import { AnalysisReport } from './components/AnalysisReport';
 import { useMarketStore } from './store/marketStore';
+import { useWebSocket } from './hooks/useWebSocket';
 
 function App() {
   const { activeView } = useMarketStore();
+  
+  // Initialize WebSocket connection for real-time updates
+  useWebSocket();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

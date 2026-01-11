@@ -5,12 +5,14 @@ import {
   flexRender,
   createColumnHelper,
   SortingState,
+  getPaginationRowModel,
+  getFilteredRowModel,
 } from '@tanstack/react-table';
 import { useState } from 'react';
 import { useTopPerformers } from '../api/market.api';
 import { useMarketStore } from '../store/marketStore';
 import { MarketData } from '../api/client';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const columnHelper = createColumnHelper<MarketData>();
 
@@ -18,6 +20,7 @@ export function MarketTable() {
   const { filters, setSelectedSymbol, setActiveView } = useMarketStore();
   const { data, isLoading, error } = useTopPerformers(filters);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const columns = [
     columnHelper.accessor('symbol', {
@@ -103,9 +106,27 @@ export function MarketTable() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, columnId, filterValue) => {
+      const searchValue = filterValue.toLowerCase();
+      const symbol = row.getValue('symbol') as string;
+      const name = row.getValue('name') as string;
+      return (
+        symbol.toLowerCase().includes(searchValue) ||
+        name.toLowerCase().includes(searchValue)
+      );
+    },
     state: {
       sorting,
+      globalFilter,
+    },
+    initialState: {
+      pagination: {
+        pageSize: filters.limit || 20,
+      },
     },
   });
 
@@ -136,6 +157,20 @@ export function MarketTable() {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Search Bar */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search by symbol or name..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-market-blue"
+          />
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700">
@@ -183,9 +218,34 @@ export function MarketTable() {
           </tbody>
         </table>
       </div>
-      {data?.data.length === 0 && (
+      {table.getRowModel().rows.length === 0 && (
         <div className="p-8 text-center text-gray-600 dark:text-gray-400">
-          No data available
+          {globalFilter ? 'No results found' : 'No data available'}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {table.getPageCount() > 1 && (
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       )}
     </div>

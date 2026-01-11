@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { MarketData } from '../services/market.service';
 
 // Yahoo Finance API via yfinance-node or direct API calls

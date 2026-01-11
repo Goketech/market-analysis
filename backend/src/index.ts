@@ -8,6 +8,7 @@ import { analysisRouter } from './routes/analysis.routes';
 import { notificationsRouter } from './routes/notifications.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { setupSocketIO } from './websocket/socket';
+import { PriceAlertWorker } from './workers/price-alert.worker';
 
 dotenv.config();
 
@@ -52,10 +53,29 @@ app.use(errorHandler);
 // Setup WebSocket
 setupSocketIO(io);
 
+// Start BullMQ worker for price alerts
+let priceAlertWorker: PriceAlertWorker | null = null;
+if (process.env.ENABLE_WORKERS !== 'false') {
+  priceAlertWorker = new PriceAlertWorker(io);
+  console.log('✅ Price alert worker started');
+}
+
 // Start server
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Market Intelligence Hub API v1.0.0`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  if (priceAlertWorker) {
+    await priceAlertWorker.close();
+  }
+  httpServer.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
 export { io };

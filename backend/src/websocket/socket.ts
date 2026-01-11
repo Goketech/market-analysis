@@ -7,6 +7,17 @@ export function setupSocketIO(io: Server): void {
   io.on('connection', (socket) => {
     console.log(`Client connected: ${socket.id}`);
 
+    // Handle user room joining for price alerts
+    socket.on('join:user', (userId: string) => {
+      socket.join(`user:${userId}`);
+      console.log(`User ${userId} joined their alert room`);
+    });
+    
+    socket.on('leave:user', (userId: string) => {
+      socket.leave(`user:${userId}`);
+      console.log(`User ${userId} left their alert room`);
+    });
+
     // Subscribe to market updates
     socket.on('subscribe:market', async (data: { market: string; type: 'gainers' | 'losers' }) => {
       try {

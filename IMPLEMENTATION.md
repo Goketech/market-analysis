@@ -11,54 +11,35 @@
 - ✅ CORS configuration
 - ✅ WebSocket support (Socket.io)
 - ✅ Health check endpoint
+- ✅ **Rate limiting middleware** (NEW)
 
 #### Data Providers (Adapter Pattern)
 - ✅ **CoinGeckoProvider**: Crypto market data integration
-  - Top performers (gainers/losers)
-  - Coin data retrieval
-  - API key support for rate limits
-
-- ✅ **YahooFinanceProvider**: US Stock market data
-  - Top performers filtering
-  - Stock data retrieval
-  - Note: Currently uses mock data structure (ready for yfinance-node integration)
-
-- ✅ **NGXProvider**: Nigerian Stock Exchange integration
-  - Top performers for NGX stocks
-  - Placeholder structure for actual NGX API integration
+- ✅ **YahooFinanceProvider**: US Stock market data (mock structure)
+- ✅ **NGXProvider**: Nigerian Stock Exchange integration (mock structure)
 
 #### Services Layer
 - ✅ **MarketService**: Aggregates data from all providers
   - Multi-market filtering (all, stocks, crypto, ngx)
-  - Timeframe support (daily, ytd)
+  - **Enhanced timeframes** (daily, weekly, monthly, ytd) (NEW)
   - Gainers/Losers sorting
-
 - ✅ **AnalysisService**: Orchestrates comprehensive analysis
-  - Technical analysis (RSI, MACD, Support/Resistance)
-  - Fundamental analysis (P/E, Market Cap, Volume, Debt)
-  - Sentiment analysis (score, news count, social sentiment)
-  - AI-powered recommendations
-
-- ✅ **NotificationService**: Alert subscription management
-  - Redis-based storage
-  - BullMQ queue integration for background monitoring
+- ✅ **NotificationService**: Alert subscription management with BullMQ
 
 #### Analysis Engine
 - ✅ **AnalysisEngine**: Technical indicator calculations
-  - RSI (Relative Strength Index)
-  - MACD (Moving Average Convergence Divergence)
-  - Support/Resistance levels
-  - Trend detection
-
 - ✅ **AIService**: LangChain integration for recommendations
-  - OpenAI GPT-4 integration
-  - Structured prompt templates
-  - Fallback to rule-based recommendations
-  - Confidence scoring
+
+#### Workers & Background Jobs
+- ✅ **PriceAlertWorker**: BullMQ worker for monitoring price alerts (NEW)
+  - Processes price alert jobs from queue
+  - Emits WebSocket notifications when thresholds are met
+  - Handles subscription cleanup
 
 #### API Endpoints
-- ✅ `GET /api/v1/market/top-performers` - Filtered market data
-- ✅ `GET /api/v1/analysis/:symbol` - Comprehensive analysis reports
+- ✅ `GET /api/v1/market/top-performers` - Filtered market data (with rate limiting)
+- ✅ `GET /api/v1/analysis/:symbol` - Comprehensive analysis reports (with rate limiting)
+- ✅ `GET /api/v1/analysis/:symbol/export/pdf` - PDF export (NEW)
 - ✅ `POST /api/v1/notifications/subscribe` - Alert subscriptions
 - ✅ `POST /api/v1/notifications/unsubscribe` - Unsubscribe from alerts
 
@@ -70,11 +51,13 @@
 - ✅ Tailwind CSS for styling
 - ✅ TanStack Query for server state management
 - ✅ Zustand for global UI state
+- ✅ **Socket.io-client for WebSocket** (NEW)
 
 #### Components
-- ✅ **FilterBar**: Market filtering sidebar
+- ✅ **FilterBar**: Enhanced market filtering sidebar
   - Market type selection (All, US Stocks, Crypto, NGX)
-  - Timeframe selection (Daily, YTD)
+  - **Enhanced timeframes** (Daily, Weekly, Monthly, YTD) (NEW)
+  - **Country filter** (US, NG, GB, CA) (NEW)
   - Gainers/Losers toggle
   - Results limit selector
 
@@ -82,6 +65,8 @@
   - TanStack Table integration
   - Sortable columns
   - Color-coded cells (green/red for gains/losses)
+  - **Search functionality** (NEW)
+  - **Pagination** (NEW)
   - Click-to-view analysis
   - Responsive design
 
@@ -91,19 +76,19 @@
   - Fundamental data display
   - Sentiment analysis
   - Entry/Exit targets
+  - **PDF Export button** (NEW)
+
+#### Hooks
+- ✅ **useWebSocket**: Real-time WebSocket connection hook (NEW)
+  - Connects to backend Socket.io server
+  - Subscribes to market updates
+  - Handles price alerts
+  - Browser notification support
 
 #### State Management
 - ✅ **marketStore** (Zustand): Global filters and UI state
-  - Market filters
-  - Active view (table/analysis)
-  - Selected symbol
-  - Dark mode toggle
-
-#### API Integration
-- ✅ Axios-based API client
-- ✅ React Query hooks for data fetching
-  - `useTopPerformers`: Auto-refreshing market data
-  - `useAnalysisReport`: Cached analysis reports
+  - Enhanced filters with weekly/monthly timeframes
+  - Country filtering support
 
 ### Infrastructure
 
@@ -117,55 +102,95 @@
 - ✅ ESLint configurations
 - ✅ Monorepo workspace setup
 - ✅ Concurrent dev script
+- ✅ **Worker script** (`npm run dev:worker`) (NEW)
 
 ## What's Working
 
-1. **Backend API**: Fully functional REST API with all endpoints
-2. **Data Aggregation**: Multi-source data fetching (CoinGecko, Yahoo Finance structure, NGX structure)
+1. **Backend API**: Fully functional REST API with rate limiting
+2. **Data Aggregation**: Multi-source data fetching
 3. **Analysis Pipeline**: Complete technical + fundamental + sentiment analysis
-4. **Frontend UI**: Interactive table with filtering and analysis views
-5. **Real-time Ready**: WebSocket infrastructure in place
-6. **AI Integration**: LangChain setup with OpenAI (falls back to rules if no API key)
+4. **Frontend UI**: Interactive table with search, pagination, and filtering
+5. **Real-time Updates**: WebSocket infrastructure with live price updates
+6. **AI Integration**: LangChain setup with OpenAI
+7. **Price Alerts**: BullMQ worker monitoring price thresholds
+8. **PDF Export**: Analysis reports can be exported as PDF
 
-## Next Steps (Sprint 2-4)
+## New Features Implemented
 
-### Sprint 2: NGX Layer & Enhanced Filtering
-- [ ] Integrate actual NGX API or web scraping
-- [ ] Country-based filtering
-- [ ] Enhanced timeframes (weekly, monthly)
-- [ ] Advanced table features (pagination, search)
+### Sprint 2-4: Enhanced Features ✅
 
-### Sprint 3: AI & Reports
-- [ ] Enhanced LangChain prompts
-- [ ] PDF export functionality
+1. **Rate Limiting** ✅
+   - API rate limiter (100 requests per 15 minutes)
+   - Analysis rate limiter (20 requests per hour)
+   - Redis-based sliding window implementation
+
+2. **BullMQ Worker** ✅
+   - Price alert monitoring worker
+   - Processes jobs from Redis queue
+   - Emits WebSocket notifications
+   - Automatic subscription cleanup
+
+3. **Real-time WebSocket Integration** ✅
+   - Frontend WebSocket hook
+   - Live market data updates
+   - Price alert notifications
+   - Browser notification support
+
+4. **PDF Export** ✅
+   - Analysis report PDF generation
+   - Includes all analysis sections
+   - Downloadable from frontend
+
+5. **Enhanced Filtering** ✅
+   - Weekly and monthly timeframes
+   - Country-based filtering
+   - Improved filter UI
+
+6. **Table Enhancements** ✅
+   - Search functionality (symbol/name)
+   - Pagination controls
+   - Better UX with search bar
+
+## Usage
+
+### Starting the Application
+
+```bash
+# Install dependencies
+npm run install:all
+
+# Start databases
+docker-compose up -d
+
+# Start backend (includes worker)
+npm run dev:backend
+
+# Or start worker separately
+npm run dev:worker
+
+# Start frontend
+npm run dev:frontend
+```
+
+### WebSocket Usage
+
+The frontend automatically connects to WebSocket on mount. To receive price alerts:
+
+1. Subscribe to alerts via API: `POST /api/v1/notifications/subscribe`
+2. Join user room: `socket.emit('join:user', userId)`
+3. Receive alerts via `price-alert` event
+
+### PDF Export
+
+Click the "Export PDF" button on any analysis report to download a PDF version.
+
+## Next Steps (Optional Enhancements)
+
+- [ ] Database schema and migrations for historical data
+- [ ] Email/SMS notification integration
+- [ ] User authentication system
 - [ ] Historical analysis comparison
 - [ ] Multi-LLM support (Claude)
-
-### Sprint 4: Notifications & Real-time
-- [ ] BullMQ worker setup for price monitoring
-- [ ] Real-time price updates via WebSocket
-- [ ] Email/SMS notification integration
-- [ ] User authentication and preferences
-
-## Notes for Production
-
-1. **API Keys**: Add your CoinGecko and OpenAI API keys to `backend/.env`
-2. **Yahoo Finance**: Replace mock data with actual yfinance-node or Yahoo Finance API
-3. **NGX Integration**: Implement actual NGX API integration or web scraping
-4. **Database**: Set up PostgreSQL schema and migrations
-5. **Redis**: Configure Redis for production caching
-6. **Error Handling**: Add comprehensive logging (Winston/Pino)
-7. **Rate Limiting**: Implement rate limiting middleware
-8. **Security**: Add authentication, input validation, and API security
-
-## Testing the Application
-
-1. Start databases: `docker-compose up -d`
-2. Install dependencies: `npm run install:all`
-3. Start backend: `npm run dev:backend` (runs on port 3001)
-4. Start frontend: `npm run dev:frontend` (runs on port 5173)
-5. Open browser: http://localhost:5173
-6. Test endpoints:
-   - Health: http://localhost:3001/health
-   - Top Performers: http://localhost:3001/api/v1/market/top-performers?market=all&type=gainers&limit=20
-   - Analysis: http://localhost:3001/api/v1/analysis/BTC?market=crypto
+- [ ] Advanced charting with Recharts
+- [ ] Watchlist functionality
+- [ ] Portfolio tracking

@@ -4,7 +4,7 @@ import { NGXProvider } from '../providers/ngx.provider';
 
 export interface MarketFilters {
   market: string;
-  timeframe: 'daily' | 'ytd';
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'ytd';
   country?: string;
   limit: number;
   type: 'gainers' | 'losers';
@@ -44,7 +44,7 @@ export class MarketService {
       results.push(...cryptoData);
     }
 
-    if (filters.market === 'all' || filters.market === 'us') {
+    if (filters.market === 'all' || filters.market === 'stocks') {
       const stockData = await this.yahooFinanceProvider.getTopPerformers(
         filters.type,
         filters.limit

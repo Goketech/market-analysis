@@ -44,7 +44,7 @@ export class MarketService {
       results.push(...cryptoData);
     }
 
-    if (filters.market === 'all' || filters.market === 'stocks') {
+    if (filters.market === 'all' || filters.market === 'us') {
       const stockData = await this.yahooFinanceProvider.getTopPerformers(
         filters.type,
         filters.limit

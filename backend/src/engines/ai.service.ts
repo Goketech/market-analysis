@@ -7,6 +7,18 @@ interface RecommendationInput {
   technical: AnalysisReport['technical'];
   fundamental: AnalysisReport['fundamental'];
   sentiment: AnalysisReport['sentiment'];
+  performance?: {
+    fiveYearReturn: number;
+    annualizedReturn: number;
+    volatility: number;
+    sharpeRatio: number;
+  };
+  filings?: {
+    latestRevenue?: number;
+    latestNetIncome?: number;
+    latestEPS?: number;
+    latestDebt?: number;
+  };
 }
 
 export class AIService {
@@ -30,9 +42,32 @@ export class AIService {
     }
 
     try {
+      // Build enhanced prompt with all available data
+      let performanceSection = '';
+      if (input.performance) {
+        performanceSection = `
+5-Year Performance:
+- 5-Year Return: ${input.performance.fiveYearReturn.toFixed(2)}%
+- Annualized Return: ${input.performance.annualizedReturn.toFixed(2)}%
+- Volatility: ${input.performance.volatility.toFixed(2)}%
+- Sharpe Ratio: ${input.performance.sharpeRatio.toFixed(2)}
+`;
+      }
+
+      let filingsSection = '';
+      if (input.filings) {
+        filingsSection = `
+SEC Filings Data:
+${input.filings.latestRevenue ? `- Revenue: $${(input.filings.latestRevenue / 1e9).toFixed(2)}B` : ''}
+${input.filings.latestNetIncome ? `- Net Income: $${(input.filings.latestNetIncome / 1e9).toFixed(2)}B` : ''}
+${input.filings.latestEPS ? `- EPS: $${input.filings.latestEPS.toFixed(2)}` : ''}
+${input.filings.latestDebt ? `- Total Debt: $${(input.filings.latestDebt / 1e9).toFixed(2)}B` : ''}
+`;
+      }
+
       const prompt = PromptTemplate.fromTemplate(`
 You are a Senior Equity Analyst with 20+ years of experience in financial markets.
-Analyze the following data and provide a trading recommendation.
+Analyze the following comprehensive data and provide a trading recommendation.
 
 Symbol: {symbol}
 RSI: {rsi} ({rsiStatus})
@@ -44,12 +79,13 @@ P/E Ratio: {pe}
 Market Cap: {marketCap}
 Sentiment Score: {sentimentScore} ({sentimentStatus})
 News Count: {newsCount}
-
-Based on this data, provide:
+${performanceSection}
+${filingsSection}
+Based on this comprehensive data, provide:
 1. A clear BUY, SELL, or HOLD recommendation
 2. A confidence score (0-100)
 3. Entry target price (if BUY) or Exit target price (if SELL)
-4. Brief reasoning (2-3 sentences)
+4. Brief reasoning (2-3 sentences) that considers technical indicators, fundamentals, sentiment, historical performance, and SEC filings data
 
 Format your response as JSON:
 {{

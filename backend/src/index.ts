@@ -6,14 +6,32 @@ import { Server } from 'socket.io';
 import { marketRouter } from './routes/market.routes';
 import { analysisRouter } from './routes/analysis.routes';
 import { notificationsRouter } from './routes/notifications.routes';
+import { sentimentRouter } from './routes/sentiment.routes';
+import { filingsRouter } from './routes/filings.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { setupSocketIO } from './websocket/socket';
 import { PriceAlertWorker } from './workers/price-alert.worker';
 
 dotenv.config();
 
+// Suppress Redis connection errors globally (BullMQ creates its own connections)
+process.on('unhandledRejection', (reason: any) => {
+  if (reason && typeof reason === 'object') {
+    // Check if it's a Redis connection error
+    if (reason.code === 'ECONNREFUSED' || 
+        reason.message?.includes('ECONNREFUSED') ||
+        (reason.errors && Array.isArray(reason.errors) && 
+         reason.errors.some((e: any) => e.code === 'ECONNREFUSED'))) {
+      // Silently ignore Redis connection errors
+      return;
+    }
+  }
+  // Log other unhandled rejections
+  console.error('Unhandled rejection:', reason);
+});
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // CORS configuration - ensure single origin value (no arrays, no brackets)
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -46,6 +64,8 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1/market', marketRouter);
 app.use('/api/v1/analysis', analysisRouter);
 app.use('/api/v1/notifications', notificationsRouter);
+app.use('/api/v1/sentiment', sentimentRouter);
+app.use('/api/v1/filings', filingsRouter);
 
 // Error handling
 app.use(errorHandler);

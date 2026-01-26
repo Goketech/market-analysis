@@ -10,11 +10,11 @@ interface MarketFilters {
 
 interface MarketStore {
   filters: MarketFilters;
-  activeView: 'table' | 'analysis';
+  activeView: 'table' | 'analysis' | 'bestPerformers';
   selectedSymbol: string | null;
   darkMode: boolean;
   setFilters: (filters: Partial<MarketFilters>) => void;
-  setActiveView: (view: 'table' | 'analysis') => void;
+  setActiveView: (view: 'table' | 'analysis' | 'bestPerformers') => void;
   setSelectedSymbol: (symbol: string | null) => void;
   toggleDarkMode: () => void;
 }

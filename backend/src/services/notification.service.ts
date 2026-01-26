@@ -13,16 +13,21 @@ export class NotificationService {
   private redis: Redis;
 
   constructor() {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null, // Required for BullMQ
-    });
+    const { createRedisConnection, getBullMQConnectionOptions, suppressBullMQErrors } = require('../utils/redis.config');
+    // BullMQ requires maxRetriesPerRequest: null
+    this.redis = createRedisConnection({ maxRetriesPerRequest: null });
+    // Error handling is already done in createRedisConnection
 
+    // BullMQ needs connection options, not the Redis instance
+    const connectionOptions = getBullMQConnectionOptions();
+    connectionOptions.maxRetriesPerRequest = null;
+    
     this.alertQueue = new Queue('price-alerts', {
-      connection: this.redis,
+      connection: connectionOptions,
     });
+    
+    // Suppress connection errors from BullMQ
+    suppressBullMQErrors(this.alertQueue);
   }
 
   async subscribe(subscription: AlertSubscription): Promise<{ id: string }> {

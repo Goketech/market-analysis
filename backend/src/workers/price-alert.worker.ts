@@ -12,44 +12,60 @@ interface PriceAlertJob {
 }
 
 export class PriceAlertWorker {
-  private worker: Worker;
+  private worker: Worker | null = null;
   private marketService: MarketService;
-  private redis: Redis;
+  private redis: Redis | null = null;
   private io?: Server;
 
   constructor(io?: Server) {
     this.io = io;
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null, // Required for BullMQ
-    });
-
     this.marketService = new MarketService();
+    
+    try {
+      const { createRedisConnection, getBullMQConnectionOptions, suppressBullMQErrors } = require('../utils/redis.config');
+      // BullMQ requires maxRetriesPerRequest: null
+      this.redis = createRedisConnection({ maxRetriesPerRequest: null });
+      // Error handling is already done in createRedisConnection
 
-    this.worker = new Worker(
-      'price-alerts',
-      async (job: Job<PriceAlertJob>) => {
-        await this.processPriceAlert(job);
-      },
-      {
-        connection: this.redis,
-        concurrency: 5,
-      }
-    );
+      // BullMQ needs connection options, not the Redis instance
+      const connectionOptions = getBullMQConnectionOptions();
+      connectionOptions.maxRetriesPerRequest = null;
 
-    this.worker.on('completed', (job) => {
-      console.log(`Price alert job ${job.id} completed`);
-    });
+      this.worker = new Worker(
+        'price-alerts',
+        async (job: Job<PriceAlertJob>) => {
+          await this.processPriceAlert(job);
+        },
+        {
+          connection: connectionOptions,
+          concurrency: 5,
+        }
+      );
+      
+      // Suppress connection errors from BullMQ
+      suppressBullMQErrors(this.worker);
 
-    this.worker.on('failed', (job, err) => {
-      console.error(`Price alert job ${job?.id} failed:`, err);
-    });
+      this.worker.on('completed', (job) => {
+        console.log(`Price alert job ${job.id} completed`);
+      });
+
+      this.worker.on('failed', (job, err) => {
+        console.error(`Price alert job ${job?.id} failed:`, err);
+      });
+    } catch (error) {
+      console.warn('Redis not available, price alert worker disabled');
+      this.redis = null;
+      this.worker = null;
+    }
   }
 
   private async processPriceAlert(job: Job<PriceAlertJob>): Promise<void> {
     const { subscriptionId, symbol, alertType, threshold, userId } = job.data;
+
+    // If Redis is not available, skip processing
+    if (!this.redis) {
+      return;
+    }
 
     // Check if subscription still exists in Redis
     const subscription = await this.redis.get(subscriptionId);
@@ -129,8 +145,12 @@ export class PriceAlertWorker {
   }
 
   async close(): Promise<void> {
-    await this.worker.close();
-    await this.redis.quit();
+    if (this.worker) {
+      await this.worker.close();
+    }
+    if (this.redis) {
+      await this.redis.quit();
+    }
   }
 }
 

@@ -1,12 +1,21 @@
 import { RSI, MACD } from 'technicalindicators';
 import { AnalysisReport } from '../services/analysis.service';
 import { AIService } from './ai.service';
+import { SentimentService } from '../services/sentiment.service';
+import { FilingsService } from '../services/filings.service';
+import { PerformanceService } from '../services/performance.service';
 
 export class AnalysisEngine {
   private aiService: AIService;
+  private sentimentService: SentimentService;
+  private filingsService: FilingsService;
+  private performanceService: PerformanceService;
 
   constructor() {
     this.aiService = new AIService();
+    this.sentimentService = new SentimentService();
+    this.filingsService = new FilingsService();
+    this.performanceService = new PerformanceService();
   }
 
   async generateReport(
@@ -21,17 +30,52 @@ export class AnalysisEngine {
     const technical = this.calculateTechnicalIndicators(prices);
     
     // Extract fundamental data
-    const fundamental = this.extractFundamentalData(rawData, marketType);
+    const fundamental = await this.extractFundamentalData(rawData, marketType, symbol);
     
-    // Calculate sentiment (mock for now)
+    // Calculate sentiment
     const sentiment = await this.calculateSentiment(symbol);
     
-    // Generate AI recommendation
+    // Get performance data (optional, for US stocks)
+    let performance: { fiveYearReturn: number; annualizedReturn: number; volatility: number; sharpeRatio: number } | undefined;
+    let filings: { latestRevenue?: number; latestNetIncome?: number; latestEPS?: number; latestDebt?: number } | undefined;
+    
+    if (marketType === 'us') {
+      try {
+        const perfData = await this.performanceService.calculatePerformance(symbol, 'us', 5);
+        performance = {
+          fiveYearReturn: perfData.fiveYearReturn,
+          annualizedReturn: perfData.annualizedReturn,
+          volatility: perfData.volatility,
+          sharpeRatio: perfData.sharpeRatio,
+        };
+      } catch (error) {
+        console.warn(`Failed to fetch performance data for ${symbol}:`, error);
+      }
+
+      try {
+        const filingsData = await this.filingsService.getFilings(symbol, undefined, true, 1);
+        const latestFiling = filingsData.latest10K || filingsData.latest10Q;
+        if (latestFiling?.metrics) {
+          filings = {
+            latestRevenue: latestFiling.metrics.revenue,
+            latestNetIncome: latestFiling.metrics.netIncome,
+            latestEPS: latestFiling.metrics.earningsPerShare,
+            latestDebt: latestFiling.metrics.totalDebt,
+          };
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch filings data for ${symbol}:`, error);
+      }
+    }
+    
+    // Generate AI recommendation with enhanced data
     const recommendation = await this.aiService.generateRecommendation({
       symbol,
       technical,
       fundamental,
       sentiment,
+      performance,
+      filings,
     });
 
     return {
@@ -104,37 +148,86 @@ export class AnalysisEngine {
     };
   }
 
-  private extractFundamentalData(
+  private async extractFundamentalData(
     data: any,
-    marketType: 'us' | 'crypto' | 'ngx'
-  ): AnalysisReport['fundamental'] {
+    marketType: 'us' | 'crypto' | 'ngx',
+    symbol: string
+  ): Promise<AnalysisReport['fundamental']> {
     if (marketType === 'crypto') {
       return {
         marketCap: data.market_data?.market_cap?.usd,
         volume24h: data.market_data?.total_volume?.usd,
       };
     } else {
-      return {
+      // Base fundamental data from provider
+      const fundamental: AnalysisReport['fundamental'] = {
         pe: data.trailingPE || data.forwardPE,
         marketCap: data.marketCap,
         volume24h: data.regularMarketVolume,
         debt: data.totalDebt,
       };
+
+      // Enhance with SEC filings data for US stocks
+      if (marketType === 'us') {
+        try {
+          const filings = await this.filingsService.getFilings(symbol, undefined, false, 1);
+          
+          // Use metrics from latest 10-K or 10-Q
+          const latestFiling = filings.latest10K || filings.latest10Q;
+          if (latestFiling?.metrics) {
+            const metrics = latestFiling.metrics;
+            
+            // Override with SEC data if available
+            if (metrics.revenue !== undefined) {
+              // Revenue can be used to calculate P/S ratio if market cap is available
+            }
+            if (metrics.netIncome !== undefined) {
+              // Net income can be used to calculate P/E if not available
+              if (!fundamental.pe && fundamental.marketCap && metrics.sharesOutstanding) {
+                const eps = metrics.earningsPerShare || (metrics.netIncome / metrics.sharesOutstanding);
+                if (eps > 0) {
+                  fundamental.pe = fundamental.marketCap / (eps * metrics.sharesOutstanding);
+                }
+              }
+            }
+            if (metrics.totalDebt !== undefined) {
+              fundamental.debt = metrics.totalDebt;
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch SEC filings for ${symbol}:`, error);
+          // Continue with base fundamental data
+        }
+      }
+
+      return fundamental;
     }
   }
 
-  private async calculateSentiment(_symbol: string): Promise<AnalysisReport['sentiment']> {
-    // Mock sentiment calculation
-    // In production, integrate with NewsAPI, Twitter API, etc.
-    const score = Math.random() * 100;
-    const newsCount = Math.floor(Math.random() * 50);
-    const socialSentiment: 'positive' | 'negative' | 'neutral' =
-      score > 60 ? 'positive' : score < 40 ? 'negative' : 'neutral';
+  private async calculateSentiment(symbol: string): Promise<AnalysisReport['sentiment']> {
+    try {
+      // Get real sentiment analysis from Twitter
+      const sentimentResult = await this.sentimentService.getSentiment(symbol, false);
+      
+      // Map to AnalysisReport sentiment format
+      const socialSentiment: 'positive' | 'negative' | 'neutral' =
+        sentimentResult.weightedScore > 60 ? 'positive' 
+        : sentimentResult.weightedScore < 40 ? 'negative' 
+        : 'neutral';
 
-    return {
-      score,
-      newsCount,
-      socialSentiment,
-    };
+      return {
+        score: sentimentResult.weightedScore,
+        newsCount: sentimentResult.sampleSize,
+        socialSentiment,
+      };
+    } catch (error) {
+      console.error(`Error calculating sentiment for ${symbol}:`, error);
+      // Fallback to neutral sentiment if service fails
+      return {
+        score: 50,
+        newsCount: 0,
+        socialSentiment: 'neutral',
+      };
+    }
   }
 }

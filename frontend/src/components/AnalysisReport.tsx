@@ -2,6 +2,7 @@ import { useAnalysisReport } from '../api/market.api';
 import { useMarketStore } from '../store/marketStore';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Download } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { SentimentAnalysis } from './SentimentAnalysis';
 
 export function AnalysisReport() {
   const { selectedSymbol, filters, setActiveView, setSelectedSymbol } = useMarketStore();
@@ -257,32 +258,8 @@ export function AnalysisReport() {
         </div>
       </div>
 
-      {/* Sentiment Analysis */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Sentiment Analysis
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Sentiment Score</span>
-            <p className="text-xl font-semibold text-gray-900 dark:text-white">
-              {sentiment.score.toFixed(2)}
-            </p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">News Count</span>
-            <p className="text-xl font-semibold text-gray-900 dark:text-white">
-              {sentiment.newsCount}
-            </p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Social Sentiment</span>
-            <p className="text-xl font-semibold capitalize text-gray-900 dark:text-white">
-              {sentiment.socialSentiment}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Sentiment Analysis - Full Component */}
+      <SentimentAnalysis symbol={selectedSymbol || ''} />
     </div>
   );
 }

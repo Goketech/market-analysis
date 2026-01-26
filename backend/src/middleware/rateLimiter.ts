@@ -13,11 +13,9 @@ class RateLimiter {
   private options: Required<RateLimitOptions>;
 
   constructor(options: RateLimitOptions) {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      password: process.env.REDIS_PASSWORD || undefined,
-    });
+    const { createRedisConnection } = require('../utils/redis.config');
+    this.redis = createRedisConnection();
+    // Error handling is already done in createRedisConnection
 
     this.options = {
       windowMs: options.windowMs,
@@ -58,9 +56,12 @@ class RateLimiter {
         res.setHeader('X-RateLimit-Reset', new Date(Date.now() + this.options.windowMs).toISOString());
 
         next();
-      } catch (error) {
+      } catch (error: any) {
         // If Redis fails, allow request (fail open)
-        console.error('Rate limiter error:', error);
+        // Only log if it's not a connection error (those are expected when Redis is down)
+        if (error?.message && !error.message.includes('Connection is closed') && !error.message.includes('ECONNREFUSED')) {
+          console.error('Rate limiter error:', error.message);
+        }
         next();
       }
     };

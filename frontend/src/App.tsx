@@ -1,74 +1,118 @@
-import { useState } from 'react';
-import { FilterBar } from './components/FilterBar';
-import { MarketTable } from './components/MarketTable';
-import { AnalysisReport } from './components/AnalysisReport';
-import { BestPerformers5Y } from './components/BestPerformers5Y';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { DashboardLayout } from './components/layout/DashboardLayout';
 import { useMarketStore } from './store/marketStore';
+import { useAuthStore } from './store/authStore';
+import { useEffect, lazy, Suspense } from 'react';
+import { Skeleton } from './components/ui/skeleton';
 import { useWebSocket } from './hooks/useWebSocket';
-import { Trophy, BarChart3, FileText } from 'lucide-react';
 
-function App() {
-  const { activeView, setActiveView } = useMarketStore();
-  
-  // Initialize WebSocket connection for real-time updates
-  useWebSocket();
+// Pages (lazy loaded)
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const MarketPage = lazy(() => import('./pages/MarketPage'));
+const AnalysisPage = lazy(() => import('./pages/AnalysisPage'));
+const SentimentPage = lazy(() => import('./pages/SentimentPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const BillingPage = lazy(() => import('./pages/BillingPage'));
 
+// Legacy imports kept for backward compat
+const BestPerformers5Y = lazy(() => import('./components/BestPerformers5Y').then(m => ({ default: m.BestPerformers5Y })));
+const SECFilings = lazy(() => import('./components/SECFilings').then(m => ({ default: m.SECFilings })));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+function PageLoader() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Market Intelligence Hub
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Real-time financial data aggregation and AI-powered analysis
-              </p>
-            </div>
-            <nav className="flex gap-3">
-              <button
-                onClick={() => setActiveView('table')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeView === 'table'
-                    ? 'bg-market-blue text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <BarChart3 size={18} />
-                Market Table
-              </button>
-              <button
-                onClick={() => setActiveView('bestPerformers')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeView === 'bestPerformers'
-                    ? 'bg-market-blue text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <Trophy size={18} />
-                Best Performers 5Y
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6">
-          <aside className="w-64 flex-shrink-0">
-            <FilterBar />
-          </aside>
-
-          <main className="flex-1">
-            {activeView === 'table' && <MarketTable />}
-            {activeView === 'analysis' && <AnalysisReport />}
-            {activeView === 'bestPerformers' && <BestPerformers5Y />}
-          </main>
-        </div>
-      </div>
+    <div className="space-y-4 p-6">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-32 rounded-xl" />
+      <Skeleton className="h-64 rounded-xl" />
     </div>
   );
 }
 
-export default App;
+function AppInner() {
+  const { darkMode } = useMarketStore();
+  useWebSocket();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Auth page (no layout) */}
+        <Route path="/auth" element={<AuthPage />} />
+
+        {/* Main app with sidebar layout */}
+        <Route element={<DashboardLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/market" element={<MarketPage />} />
+          <Route path="/analysis" element={<AnalysisPage />} />
+          <Route path="/sentiment" element={<SentimentPage />} />
+          <Route path="/performers" element={
+            <Suspense fallback={<PageLoader />}>
+              <BestPerformers5Y />
+            </Suspense>
+          } />
+          <Route path="/filings" element={
+            <Suspense fallback={<PageLoader />}>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Enter a US stock symbol to view SEC filings.</p>
+                <SECFilings symbol="AAPL" />
+              </div>
+            </Suspense>
+          } />
+          <Route path="/watchlist" element={
+            <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+              <p className="font-medium">Watchlist coming soon</p>
+              <p className="text-sm mt-1">Add symbols to track them here.</p>
+            </div>
+          } />
+          <Route path="/alerts" element={
+            <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+              <p className="font-medium">Price Alerts</p>
+              <p className="text-sm mt-1">Price alert management coming soon.</p>
+            </div>
+          } />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/billing" element={<BillingPage />} />
+          <Route path="/settings" element={
+            <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+              <p className="font-medium">Settings</p>
+              <p className="text-sm mt-1">Account settings coming soon.</p>
+            </div>
+          } />
+        </Route>
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
+export default function App() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AppInner />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
+  );
+}

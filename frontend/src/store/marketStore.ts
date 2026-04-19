@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-interface MarketFilters {
+export interface MarketFilters {
   market: 'all' | 'us' | 'crypto' | 'ngx';
   timeframe: 'daily' | 'weekly' | 'monthly' | 'ytd';
   country?: string;
@@ -19,21 +20,27 @@ interface MarketStore {
   toggleDarkMode: () => void;
 }
 
-export const useMarketStore = create<MarketStore>((set) => ({
-  filters: {
-    market: 'all',
-    timeframe: 'daily' as const,
-    type: 'gainers' as const,
-    limit: 20,
-  },
-  activeView: 'table',
-  selectedSymbol: null,
-  darkMode: false,
-  setFilters: (newFilters) =>
-    set((state) => ({
-      filters: { ...state.filters, ...newFilters },
-    })),
-  setActiveView: (view) => set({ activeView: view }),
-  setSelectedSymbol: (symbol) => set({ selectedSymbol: symbol }),
-  toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
-}));
+export const useMarketStore = create<MarketStore>()(
+  persist(
+    (set) => ({
+      filters: {
+        market: 'all',
+        timeframe: 'daily',
+        type: 'gainers',
+        limit: 20,
+      },
+      activeView: 'table',
+      selectedSymbol: null,
+      darkMode: true, // Default to dark mode
+      setFilters: (newFilters) =>
+        set((state) => ({ filters: { ...state.filters, ...newFilters } })),
+      setActiveView: (view) => set({ activeView: view }),
+      setSelectedSymbol: (symbol) => set({ selectedSymbol: symbol }),
+      toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
+    }),
+    {
+      name: 'mih-market-store',
+      partialize: (state) => ({ darkMode: state.darkMode, filters: state.filters }),
+    }
+  )
+);

@@ -23,7 +23,12 @@ router.post('/checkout', async (req: Request, res: Response) => {
     const { url } = await billingService.createCheckoutSession(user.id, user.email, tier);
     res.json({ status: 'success', data: { url } });
   } catch (error: any) {
-    res.status(500).json({ status: 'error', message: error.message });
+    const isConfigError = error.message?.includes('not configured');
+    const statusCode = isConfigError ? 503 : 500;
+    const message = isConfigError
+      ? 'Billing is not yet configured. Please set up Stripe price IDs in your environment.'
+      : error.message;
+    res.status(statusCode).json({ status: 'error', message });
   }
 });
 

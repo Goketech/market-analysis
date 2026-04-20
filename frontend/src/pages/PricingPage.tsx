@@ -92,7 +92,15 @@ export default function PricingPage() {
       navigate('/auth');
       return;
     }
-    await createCheckout.mutateAsync(tier);
+    try {
+      await createCheckout.mutateAsync(tier);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to start checkout. Please try again.';
+      alert(message);
+    }
   };
 
   return (

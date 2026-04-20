@@ -16,6 +16,7 @@ const SentimentPage = lazy(() => import('./pages/SentimentPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const BillingPage = lazy(() => import('./pages/BillingPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Legacy imports kept for backward compat
 const BestPerformers5Y = lazy(() => import('./components/BestPerformers5Y').then(m => ({ default: m.BestPerformers5Y })));
@@ -96,10 +97,8 @@ function AppInner() {
               <p className="text-sm mt-1">Account settings coming soon.</p>
             </div>
           } />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
-
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
   );

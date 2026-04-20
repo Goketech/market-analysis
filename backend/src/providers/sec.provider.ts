@@ -120,7 +120,6 @@ export class SECProvider {
       ];
 
       let tickers: any = null;
-      let lastError: any = null;
 
       for (const endpoint of endpoints) {
         try {
@@ -134,7 +133,7 @@ export class SECProvider {
           tickers = response.data;
           break; // Success, exit loop
         } catch (error: any) {
-          lastError = error;
+          // Capture error for potential debugging
           // If it's a 404, try next endpoint
           if (error.response?.status === 404) {
             continue;

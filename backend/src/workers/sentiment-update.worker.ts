@@ -99,7 +99,6 @@ export class SentimentUpdateWorker {
     await this.worker.close();
     await this.queue.close();
     await this.redis.quit();
-    await this.sentimentService.close();
   }
 }
 

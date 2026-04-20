@@ -1,6 +1,4 @@
 import axios from 'axios';
-import { YahooFinanceProvider } from './yahoofinance.provider';
-import { CoinGeckoProvider } from './coingecko.provider';
 
 export interface HistoricalPrice {
   date: Date;
@@ -20,15 +18,11 @@ export interface HistoricalDataResult {
 }
 
 export class HistoricalDataProvider {
-  private yahooFinanceProvider: YahooFinanceProvider;
-  private coinGeckoProvider: CoinGeckoProvider;
   private alphaVantageKey: string | undefined;
   private polygonKey: string | undefined;
   private coinGeckoApiKey: string | undefined;
 
   constructor() {
-    this.yahooFinanceProvider = new YahooFinanceProvider();
-    this.coinGeckoProvider = new CoinGeckoProvider();
     this.alphaVantageKey = process.env.ALPHA_VANTAGE_API_KEY;
     this.polygonKey = process.env.POLYGON_API_KEY;
     this.coinGeckoApiKey = process.env.COINGECKO_API_KEY;
@@ -292,7 +286,7 @@ export class HistoricalDataProvider {
       if (error.response?.status === 401) {
         // Try year-by-year as fallback (401 might be due to endpoint restrictions)
         try {
-          return await this.getCryptoHistoricalDataByYear(coinId, startDate, endDate);
+          return await this.getCryptoHistoricalDataByYear(symbol.toLowerCase(), startDate, endDate);
         } catch (fallbackError) {
           // If fallback also fails, throw original error
           throw error;

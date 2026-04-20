@@ -1,11 +1,11 @@
-import axios from 'axios';
+
 import { MarketData } from '../services/market.service';
 
 // NGX (Nigerian Stock Exchange) Provider
 // This is a placeholder implementation - in production, you would integrate
 // with the actual NGX API or scrape from their website
 export class NGXProvider {
-  private baseUrl = 'https://api.ngx.com'; // Placeholder URL
+  // private baseUrl = 'https://api.ngx.com'; // Placeholder URL - for future NGX API integration
 
   async getTopPerformers(
     type: 'gainers' | 'losers',
@@ -24,7 +24,7 @@ export class NGXProvider {
 
       // Mock data for development
       // In production, replace with actual API calls
-      const mockData: MarketData[] = ngxStocks.slice(0, limit).map((symbol, index) => ({
+      const mockData: MarketData[] = ngxStocks.slice(0, limit).map((symbol) => ({
         symbol: symbol,
         name: `${symbol} PLC`,
         price: 100 + Math.random() * 50,

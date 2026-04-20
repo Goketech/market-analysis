@@ -56,9 +56,9 @@ export class FilingsService {
         if (error?.message?.includes('Could not find CIK')) {
           return {
             symbol: symbol.toUpperCase(),
+            filings: [],
             latest10K: null,
             latest10Q: null,
-            otherFilings: [],
           };
         }
         throw error; // Re-throw other errors

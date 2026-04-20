@@ -45,10 +45,10 @@ export const exportAnalysisPDF = async (
     doc.text('AI Recommendation', margin, yPos);
     yPos += 8;
     doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text(`Action: ${report.recommendation.action}`, margin, yPos);
     yPos += 6;
-    doc.setFont(undefined, 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(`Confidence: ${report.recommendation.confidence}%`, margin, yPos);
     yPos += 6;
     if (report.recommendation.entryTarget) {

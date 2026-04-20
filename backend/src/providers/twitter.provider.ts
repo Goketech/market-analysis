@@ -1,6 +1,5 @@
 import { TwitterApi, TwitterApiReadOnly } from 'twitter-api-v2';
 import axios from 'axios';
-import * as cheerio from 'cheerio';
 
 export interface Tweet {
   id: string;
@@ -21,14 +20,10 @@ export interface Tweet {
 export class TwitterProvider {
   private twitterClient: TwitterApiReadOnly | null = null;
   private bearerToken: string | undefined;
-  private apiKey: string | undefined;
-  private apiSecret: string | undefined;
   private useScraperFallback: boolean = false;
 
   constructor() {
     this.bearerToken = process.env.TWITTER_BEARER_TOKEN;
-    this.apiKey = process.env.TWITTER_API_KEY;
-    this.apiSecret = process.env.TWITTER_API_SECRET;
 
     // Initialize Twitter API client if credentials are available
     if (this.bearerToken) {
@@ -58,7 +53,7 @@ export class TwitterProvider {
         return await this.searchTweetsViaAPI(symbol, maxResults);
       } else {
         // Fallback to scraper
-        return await this.searchTweetsViaScraper(symbol, maxResults);
+        return await this.searchTweetsViaScraper(symbol);
       }
     } catch (error: any) {
       console.error(`Error searching tweets for ${symbol}:`, error.message);
@@ -66,7 +61,7 @@ export class TwitterProvider {
       // If API fails and we haven't tried scraper, try scraper
       if (!this.useScraperFallback && this.twitterClient) {
         console.log('Falling back to scraper method');
-        return await this.searchTweetsViaScraper(symbol, maxResults);
+        return await this.searchTweetsViaScraper(symbol);
       }
       
       // Return empty array if all methods fail
@@ -86,10 +81,9 @@ export class TwitterProvider {
     const tweets: Tweet[] = [];
 
     try {
-      // Search for tweets with cashtag
-      const searchResults = await this.twitterClient.v2.search({
-        q: cashtag,
-        max_results: Math.min(maxResults, 100), // API limit is 100 per request
+      // Search for tweets with cashtag using v2 API
+      const searchResults = await this.twitterClient.v2.search(cashtag, {
+        max_results: Math.min(maxResults, 100) as 10 | 20 | 50 | 100, // API limit is 100 per request
         'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
         'user.fields': ['username', 'name', 'verified', 'public_metrics', 'description'],
         expansions: ['author_id'],
@@ -137,9 +131,8 @@ export class TwitterProvider {
    * Note: This is a simplified implementation. In production, you might want to use
    * a more robust scraper or consider using nitter instances for better reliability
    */
-  private async searchTweetsViaScraper(symbol: string, maxResults: number): Promise<Tweet[]> {
+  private async searchTweetsViaScraper(symbol: string): Promise<Tweet[]> {
     const cashtag = `$${symbol.toUpperCase()}`;
-    const tweets: Tweet[] = [];
 
     try {
       // Note: Direct Twitter scraping is complex and may violate Twitter's Terms of Service
